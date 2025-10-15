@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", // Modern JS output
+    "module": "CommonJS", // Node.js module system
+    "lib": ["ES2020"], // Use modern JS features
+    "outDir": "dist", // Output directory for compiled JS
+    "rootDir": "src", // Your source code directory
+    "strict": true, // Enable all strict type-checking options
+    "esModuleInterop": true, // Allow default imports from CommonJS
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "forceConsistentCasingInFileNames": true, // Enforce consistent file naming
+    "moduleResolution": "node", // Node.js module resolution
+    "resolveJsonModule": true, // Allow importing .json files
+    "allowJs": false, // Only compile TypeScript files
+    "noImplicitAny": true, // Raise error on expressions and declarations with an implied 'any' type
+    "noUnusedLocals": true, // Report unused locals
+    "noUnusedParameters": true, // Report unused parameters
+    "noFallthroughCasesInSwitch": true // Report errors for fallthrough cases in switch statement
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
