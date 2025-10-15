@@ -34,19 +34,109 @@ yarn
 npx prisma generate
 ```
 
-### 6️⃣ Build the Project
+### 6️⃣ Run Database Migrations
+
+Apply database migrations to create/update tables in PostgreSQL:
+
+```sh
+npx prisma migrate dev --name init
+```
+
+This command will:
+
+- Create a new migration file in `prisma/migrations/`
+- Apply the migration to your PostgreSQL database
+- Automatically regenerate the Prisma Client
+
+**Alternative (Quick Sync for Development):**
+
+If you want to quickly sync your schema without creating migration files:
+
+```sh
+npx prisma db push
+```
+
+### 7️⃣ Build the Project
 
 ```sh
 yarn build
 ```
 
-### 7️⃣ Start the Backend Server
+### 8️⃣ Start the Backend Server
 
 ```sh
 yarn dev
 ```
 
 The backend should now be running! 🚀
+
+---
+
+## 🗃️ Database & Prisma Management
+
+### Prisma Migrations
+
+Prisma migrations help you manage database schema changes in a controlled and versioned way.
+
+#### Create a New Migration
+
+After making changes to `prisma/schema.prisma`, create a new migration:
+
+```sh
+npx prisma migrate dev --name <migration_name>
+```
+
+#### Apply Migrations in Production
+
+Deploy pending migrations to production:
+
+```sh
+npx prisma migrate deploy
+```
+
+#### Check Migration Status
+
+View the status of all migrations:
+
+```sh
+npx prisma migrate status
+```
+
+#### Reset Database (⚠️ Deletes All Data)
+
+Reset the database and reapply all migrations:
+
+```sh
+npx prisma migrate reset
+```
+
+**Warning:** This will delete all data in your database!
+
+#### Prisma Studio (Database GUI)
+
+Open a browser-based GUI to view and edit your database:
+
+```sh
+npx prisma studio
+```
+
+This runs on `http://localhost:5555` by default.
+
+#### Format Prisma Schema
+
+Format your `schema.prisma` file:
+
+```sh
+npx prisma format
+```
+
+#### Regenerate Prisma Client
+
+If you make changes to your schema without running migrations:
+
+```sh
+npx prisma generate
+```
 
 ---
 
@@ -63,7 +153,8 @@ The backend should now be running! 🚀
 
 - Ensure you have **Node.js** and **Yarn** installed before proceeding.
 - If using a different branch, replace `main` with the appropriate branch name.
-- Run `yarn prisma migrate dev` if database migrations are needed.
+- Always run migrations after pulling changes that include schema updates.
+- Use `npx prisma studio` to visually inspect your database during development.
 
 ---
 
@@ -88,7 +179,7 @@ The application is deployed using Docker. Follow these steps to redeploy the bac
 
    ```sh
    docker stop human-in-loop-backend
-   docker remove human-in-loop-backend
+   docker rm human-in-loop-backend
    ```
 
 4. Build the new Docker image and run the updated Docker container:
@@ -100,6 +191,12 @@ The application is deployed using Docker. Follow these steps to redeploy the bac
      -p 4000:4000 \
      --env-file .env \
      human-in-loop-backend
+   ```
+
+5. **Run database migrations inside the Docker container (if needed):**
+
+   ```sh
+   docker exec -it human-in-loop-backend npx prisma migrate deploy
    ```
 
 The updated backend application should now be redeployed successfully! 🎉
@@ -121,3 +218,7 @@ DATABASE_URL=your-database-url
 # Authentication & Security
 JWT_SECRET=your-jwt-secret
 ```
+
+## 📞 Support
+
+For issues or questions, please contact the development team or create an issue in the repository.
