@@ -295,22 +295,6 @@ sequenceDiagram
     EM-->>-WM: acknowledged
     WM-->>-BG: timeout handled
     end
-    
-    %% Color coding participant boxes to match architecture diagram
-    %%{init: {'themeVariables': {
-      'actor1Bkg':'#37474f',
-      'actor2Bkg':'#5cb85c',
-      'actor3Bkg':'#5c6bc0',
-      'actor4Bkg':'#5c6bc0',
-      'actor5Bkg':'#5c6bc0',
-      'actor6Bkg':'#42a5f5',
-      'actor7Bkg':'#ef5350',
-      'actor8Bkg':'#546e7a',
-      'actor9Bkg':'#7e57c2',
-      'actor10Bkg':'#ff7043',
-      'actor11Bkg':'#37474f',
-      'actor12Bkg':'#5cb85c'
-    }}}%%
 ```
 
 ---
@@ -423,6 +407,325 @@ graph TB
     style R5 fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
     style R6 fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
     style R7 fill:#ef5350,stroke:#e57373,stroke-width:2px,color:#fff
+```
+
+---
+
+## 🗄️ Database Schema Visualization
+
+This entity-relationship diagram shows the database structure and relationships:
+
+```mermaid
+%%{init: {'themeVariables': {'scale': 0.5}}}%%
+erDiagram
+    WORKFLOW ||--o{ WORKFLOW_EVENT : "has many"
+    WORKFLOW ||--o{ DELIVERY : "has many"
+    WEBHOOK ||..o{ WORKFLOW_EVENT : "notified by"
+    
+    WORKFLOW {
+        string id PK
+        string name
+        string agentId
+        string status "PENDING|APPROVED|REJECTED|etc"
+        string actionType
+        json actionData
+        string approverEmail
+        datetime expiresAt
+        string timeoutAction "reject|approve|escalate"
+        json uiSchema "Dynamic form config"
+        string decision "approved|rejected|modified"
+        json responseData "Modified values"
+        string feedback
+        datetime respondedAt
+        datetime createdAt
+        datetime updatedAt
+    }
+    
+    WORKFLOW_EVENT {
+        string id PK
+        string workflowId FK
+        string type "workflow.created|approved|etc"
+        json data "Event payload"
+        json stateSnapshot "Complete state for rollback"
+        string actor "Who triggered"
+        string source "api|slack_webhook|timeout_job"
+        datetime timestamp
+    }
+    
+    DELIVERY {
+        string id PK
+        string workflowId FK
+        string channel "slack|email|sms"
+        string recipient "email|slack_id|phone"
+        string status "pending|sent|delivered|failed"
+        int attempts
+        int maxAttempts
+        datetime nextRetryAt "For retry job"
+        string lastError
+        json metadata "Channel-specific data"
+        datetime sentAt
+        datetime deliveredAt
+        datetime createdAt
+    }
+    
+    WEBHOOK {
+        string id PK
+        string url
+        string_array events "Event types to listen"
+        string secret "For HMAC signature"
+        boolean isActive
+        datetime createdAt
+    }
+```
+
+---
+
+## 🏗️ Service Layer Architecture
+
+This diagram illustrates the service layer organization and dependencies:
+
+```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'darkMode':'true', 'background':'#1a1d23', 'primaryColor':'#42a5f5', 'primaryTextColor':'#e3e8ef', 'primaryBorderColor':'#42a5f5', 'lineColor':'#64b5f6', 'secondaryColor':'#5c6bc0', 'tertiaryColor':'#37474f', 'clusterBkg':'#252932', 'clusterBorder':'#546e7a', 'edgeLabelBackground':'#1a1d23', 'fontSize':'13px'}}}%%
+graph TB
+    subgraph API["API Layer - Express"]
+        REST["REST<br/>Endpoints"]
+        WH["Webhook<br/>Handlers"]
+        WS["WebSocket<br/>Server"]
+    end
+    
+    subgraph Services["Service Layer - Business Logic"]
+        WM["Workflow Manager<br/>create workflow<br/>handle approval<br/>execute action<br/>schedule timeout"]
+        EM["Event Manager<br/>log event<br/>publish event<br/>get timeline<br/>replay workflow"]
+        DM["Delivery Manager<br/>send approval<br/>via Slack/Email<br/>handle retry"]
+        SM["State Manager<br/>transition state<br/>validate transition<br/>rollback<br/>get history"]
+    end
+    
+    subgraph Data["Data Layer"]
+        PRISMA["Prisma<br/>ORM"]
+        PG["PostgreSQL<br/>Database"]
+    end
+    
+    subgraph Infrastructure["Infrastructure Layer"]
+        REDIS["Redis<br/>Pub/Sub"]
+        BULL["Bull<br/>Queue"]
+    end
+    
+    subgraph External["External Services"]
+        SLACK["Slack<br/>API"]
+        EMAIL["Email<br/>SMTP"]
+        SMS["SMS<br/>Provider"]
+    end
+    
+    %% API to Services
+    REST --> WM
+    WH --> WM
+    REST --> EM
+    
+    %% Service Dependencies
+    WM --> EM
+    WM --> DM
+    WM --> SM
+    WM --> BULL
+    
+    EM --> REDIS
+    EM --> PRISMA
+    EM --> WS
+    
+    DM --> PRISMA
+    DM --> EM
+    DM --> SLACK
+    DM --> EMAIL
+    DM --> SMS
+    
+    SM --> PRISMA
+    SM --> EM
+    
+    %% Data Layer
+    PRISMA --> PG
+    
+    %% Bull Queue
+    BULL --> REDIS
+    BULL --> WM
+    
+    %% Semantic color coding with dark theme
+    
+    %% API Layer - Entry points (Amber/Orange)
+    style REST fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    style WH fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    style WS fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    
+    %% Service Layer - Core business logic (Different colors per function)
+    style WM fill:#66bb6a,stroke:#81c784,stroke-width:3px,color:#fff
+    style EM fill:#42a5f5,stroke:#64b5f6,stroke-width:3px,color:#fff
+    style DM fill:#7e57c2,stroke:#9575cd,stroke-width:3px,color:#fff
+    style SM fill:#ec407a,stroke:#f06292,stroke-width:3px,color:#fff
+    
+    %% Data Layer - Storage (Blue shades)
+    style PRISMA fill:#5c6bc0,stroke:#7986cb,stroke-width:2px,color:#fff
+    style PG fill:#3949ab,stroke:#5c6bc0,stroke-width:3px,color:#fff
+    
+    %% Infrastructure - Support systems (Red/Orange)
+    style REDIS fill:#ef5350,stroke:#e57373,stroke-width:3px,color:#fff
+    style BULL fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    
+    %% External Services - Third party (Cyan/Teal)
+    style SLACK fill:#26c6da,stroke:#4dd0e1,stroke-width:2px,color:#fff
+    style EMAIL fill:#26c6da,stroke:#4dd0e1,stroke-width:2px,color:#fff
+    style SMS fill:#26c6da,stroke:#4dd0e1,stroke-width:2px,color:#fff
+```
+
+---
+
+## 🔔 Event-Driven Architecture Flow
+
+This comprehensive diagram shows the event-driven architecture with publishers, subscribers, and event timelines:
+
+```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'darkMode':'true', 'background':'#1a1d23', 'primaryColor':'#42a5f5', 'primaryTextColor':'#e3e8ef', 'primaryBorderColor':'#42a5f5', 'lineColor':'#64b5f6', 'secondaryColor':'#5c6bc0', 'tertiaryColor':'#37474f', 'clusterBkg':'#252932', 'clusterBorder':'#546e7a', 'edgeLabelBackground':'#1a1d23', 'fontSize':'13px'}}}%%
+graph TB
+    subgraph Example3["Example 3: Human Response Flow"]
+        direction TB
+        EX3A["Human clicks Approve<br/>in Slack"]
+        EX3B["Webhook processes<br/>callback"]
+        EX3C["Workflow Manager<br/>publishes event"]
+        EX3D["Subscribers notified"]
+        EX3E["Dashboard updates<br/>Agent notified"]
+        
+        EX3A --> EX3B --> EX3C --> EX3D --> EX3E
+    end
+    
+    subgraph Example2["Example 2: Delivery Flow"]
+        direction TB
+        EX2A["Delivery Manager<br/>sends messages"]
+        EX2B["Publishes to channels<br/>Slack and Email"]
+        EX2C["Subscribers receive"]
+        EX2D["Dashboard shows<br/>delivery status"]
+        
+        EX2A --> EX2B --> EX2C --> EX2D
+    end
+    
+    subgraph Publishers["Event Publishers"]
+        WM["Workflow<br/>Manager"]
+        DM["Delivery<br/>Manager"]
+        SM["State<br/>Manager"]
+        BG["Background<br/>Jobs"]
+    end
+    
+    subgraph EventBus["Redis Pub/Sub Event Bus"]
+        CHANNEL["workflow_events<br/>channel"]
+    end
+    
+    subgraph Subscribers["Event Subscribers"]
+        WS["WebSocket<br/>Server"]
+        WEBHOOK["Webhook<br/>Trigger"]
+        LOGGER["Event<br/>Logger"]
+        METRICS["Metrics<br/>Collector"]
+        AGENT["Agent<br/>Notifier"]
+    end
+    
+    %% Publishers to Event Bus
+    WM -->|publish| CHANNEL
+    DM -->|publish| CHANNEL
+    SM -->|publish| CHANNEL
+    BG -->|publish| CHANNEL
+    
+    %% Event Bus to Subscribers
+    CHANNEL -->|subscribe| WS
+    CHANNEL -->|subscribe| WEBHOOK
+    CHANNEL -->|subscribe| LOGGER
+    CHANNEL -->|subscribe| METRICS
+    CHANNEL -->|subscribe| AGENT
+    
+    subgraph EventTimeline["Event Timeline"]
+        direction TB
+        
+        subgraph Early["Initial Events"]
+            T1["workflow.created<br/>t=0s"]
+            T2["approval.sent.slack<br/>t=0.4s"]
+            T3["approval.sent.email<br/>t=0.5s"]
+        end
+        
+        subgraph Middle["Human Interaction"]
+            T4["human.viewed<br/>t=2min"]
+            T5["human.responded<br/>t=5min"]
+        end
+        
+        subgraph Late["Execution Phase"]
+            T6["action.executing<br/>t=5min+1s"]
+            T7["workflow.completed<br/>t=5min+5s"]
+        end
+        
+        Early --> Middle --> Late
+    end
+    
+    subgraph AlternativeFlows["Alternative Flows"]
+        A1["delivery.failed<br/>Retry scheduled"]
+        A2["workflow.timeout<br/>Auto action"]
+        A3["state.changed<br/>Log transition"]
+    end
+    
+    subgraph Example1["Example 1: Creation Flow"]
+        direction TB
+        EX1A["Agent requests<br/>approval via API"]
+        EX1B["Workflow created<br/>in database"]
+        EX1C["Event published<br/>to Redis"]
+        EX1D["Subscribers<br/>notified"]
+        EX1E["Dashboard shows<br/>new approval"]
+        
+        EX1A --> EX1B --> EX1C --> EX1D --> EX1E
+    end
+    
+    %% Semantic color coding
+    
+    %% Redis Event Bus - Critical infrastructure (Red)
+    style CHANNEL fill:#ef5350,stroke:#e57373,stroke-width:4px,color:#fff
+    
+    %% Publishers - Source/Origin (Purple shades)
+    style WM fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style DM fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style SM fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style BG fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    
+    %% Subscribers - Consumers/Endpoints (Blue shades)
+    style WS fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style WEBHOOK fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style LOGGER fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style METRICS fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style AGENT fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    
+    %% Timeline - Progressive from start to completion
+    style T1 fill:#546e7a,stroke:#78909c,stroke-width:2px,color:#fff
+    style T2 fill:#5c6bc0,stroke:#7986cb,stroke-width:2px,color:#fff
+    style T3 fill:#5c6bc0,stroke:#7986cb,stroke-width:2px,color:#fff
+    style T4 fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style T5 fill:#fdd835,stroke:#ffee58,stroke-width:3px,color:#263238
+    style T6 fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style T7 fill:#66bb6a,stroke:#81c784,stroke-width:3px,color:#fff
+    
+    %% Alternative Flows - Status indicators
+    style A1 fill:#ef5350,stroke:#e57373,stroke-width:2px,color:#fff
+    style A2 fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    style A3 fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    
+    %% Example 1 - Creation flow (Gray to Blue to Green)
+    style EX1A fill:#546e7a,stroke:#78909c,stroke-width:2px,color:#fff
+    style EX1B fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style EX1C fill:#5c6bc0,stroke:#7986cb,stroke-width:2px,color:#fff
+    style EX1D fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style EX1E fill:#66bb6a,stroke:#81c784,stroke-width:2px,color:#fff
+    
+    %% Example 2 - Delivery flow (Gray to Purple to Blue to Green)
+    style EX2A fill:#546e7a,stroke:#78909c,stroke-width:2px,color:#fff
+    style EX2B fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style EX2C fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style EX2D fill:#66bb6a,stroke:#81c784,stroke-width:2px,color:#fff
+    
+    %% Example 3 - Response flow (Yellow start for human action)
+    style EX3A fill:#fdd835,stroke:#ffee58,stroke-width:3px,color:#263238
+    style EX3B fill:#546e7a,stroke:#78909c,stroke-width:2px,color:#fff
+    style EX3C fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style EX3D fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style EX3E fill:#66bb6a,stroke:#81c784,stroke-width:2px,color:#fff
 ```
 
 ---
@@ -547,105 +850,4 @@ Open a browser-based GUI to view and edit your database:
 npx prisma studio
 ```
 
-This runs on `http://localhost:5555` by default.
-
-#### Format Prisma Schema
-
-Format your `schema.prisma` file:
-
-```sh
-npx prisma format
-```
-
-#### Regenerate Prisma Client
-
-If you make changes to your schema without running migrations:
-
-```sh
-npx prisma generate
-```
-
----
-
-## 🛠️ Tech Stack
-
-- **Backend:** Express.js
-- **Database:** PostgreSQL
-- **ORM:** Prisma
-- **Package Manager:** Yarn
-
----
-
-## 📌 Notes
-
-- Ensure you have **Node.js** and **Yarn** installed before proceeding.
-- If using a different branch, replace `main` with the appropriate branch name.
-- Always run migrations after pulling changes that include schema updates.
-- Use `npx prisma studio` to visually inspect your database during development.
-
----
-
-## 🚨 Redeployment Instructions
-
-The application is deployed using Docker. Follow these steps to redeploy the backend:
-
-1. Navigate to the backend project directory:
-
-   ```sh
-   cd projects/human-in-loop-backend
-   ```
-
-2. Pull the latest changes from the repository:
-
-   ```sh
-   git checkout main  # Replace with your appropriate branch if different
-   git pull
-   ```
-
-3. Stop and remove the currently running backend container:
-
-   ```sh
-   docker stop human-in-loop-backend
-   docker rm human-in-loop-backend
-   ```
-
-4. Build the new Docker image and run the updated Docker container:
-
-   ```sh
-   docker build -t human-in-loop-backend .
-   docker run -d \
-     --name human-in-loop-backend \
-     -p 4000:4000 \
-     --env-file .env \
-     human-in-loop-backend
-   ```
-
-5. **Run database migrations inside the Docker container (if needed):**
-
-   ```sh
-   docker exec -it human-in-loop-backend npx prisma migrate deploy
-   ```
-
-The updated backend application should now be redeployed successfully! 🎉
-
----
-
-## 📂 Environment Variables
-
-Below is a list of required environment variables for this backend application:
-
-```env
-# Server & App Configuration
-PORT=4000
-LLM_BACKEND_HOST=your-llm-backend-url
-
-# Database
-DATABASE_URL=your-database-url
-
-# Authentication & Security
-JWT_SECRET=your-jwt-secret
-```
-
-## 📞 Support
-
-For issues or questions, please contact the development team or create an issue in the repository.
+This runs on `http://localhost:
