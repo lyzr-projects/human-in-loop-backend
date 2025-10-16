@@ -730,6 +730,186 @@ graph TB
 
 ---
 
+## 🎨 Frontend Architecture Diagram
+
+This comprehensive diagram shows the event-driven architecture with publishers, subscribers, and event timelines:
+
+```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'darkMode':'true', 'background':'#1a1d23', 'primaryColor':'#42a5f5', 'primaryTextColor':'#e3e8ef', 'primaryBorderColor':'#42a5f5', 'lineColor':'#64b5f6', 'secondaryColor':'#5c6bc0', 'tertiaryColor':'#37474f', 'clusterBkg':'#252932', 'clusterBorder':'#546e7a', 'edgeLabelBackground':'#1a1d23', 'fontSize':'13px'}}}%%
+graph TB
+    subgraph Browser["Browser Environment"]
+        
+        subgraph Pages["Pages and Routes"]
+            DASH["Dashboard<br/>/dashboard"]
+            DETAIL["Workflow Detail<br/>/workflow/:id"]
+            TIMELINE["Timeline View<br/>/timeline/:id"]
+        end
+
+        subgraph Components["UI Components"]
+            WC["WorkflowCard<br/>Approval display"]
+            AF["ApprovalForm<br/>Dynamic form"]
+            TL["TimelineView<br/>Event history"]
+            STATUS["StatusBadge<br/>Visual status"]
+        end
+
+        subgraph Hooks["Custom Hooks"]
+            USE_WS["useWebSocket<br/>Connection mgmt"]
+            USE_WF["useWorkflows<br/>Data fetching"]
+            USE_RT["useRealTime<br/>Live updates"]
+        end
+
+        subgraph State["State Management"]
+            CONTEXT["React Context<br/>Global state"]
+            WS_STATE["WebSocket<br/>Connection"]
+            WF_STATE["Workflows<br/>Data store"]
+        end
+
+        subgraph Network["Network Layer"]
+            API_CLIENT["API Client<br/>Axios"]
+            WS_CLIENT["WebSocket<br/>Socket.io"]
+        end
+    end
+
+    subgraph Backend["Backend Services"]
+        REST_API["REST API<br/>Express<br/>Port 3000"]
+        WS_SERVER["WebSocket<br/>Socket.io<br/>Port 3000"]
+        REDIS["Redis<br/>Pub/Sub"]
+    end
+
+    subgraph UserFlow["User Interaction Flow"]
+        direction TB
+        U1["User opens<br/>dashboard"]
+        U2["Fetch workflows<br/>via API"]
+        U3["Connect to<br/>WebSocket"]
+        U4["Receive live<br/>events"]
+        U5["UI updates<br/>automatically"]
+        
+        U1 --> U2 --> U3 --> U4 --> U5
+    end
+
+    subgraph ApprovalFlow["Approval Action Flow"]
+        direction TB
+        AP1["User clicks<br/>Approve"]
+        AP2["Form submits<br/>POST request"]
+        AP3["Backend<br/>processes"]
+        AP4["Event broadcast<br/>via WebSocket"]
+        AP5["UI reflects<br/>change"]
+        
+        AP1 --> AP2 --> AP3 --> AP4 --> AP5
+    end
+
+    subgraph DynamicUI["Dynamic UI Example"]
+        direction TB
+        DU1["uiSchema from API<br/>fields: version, confirm"]
+        DU2["ApprovalForm<br/>renders dynamic"]
+        DU3["Generated form<br/>with fields"]
+        
+        DU1 --> DU2 --> DU3
+    end
+
+    subgraph RealtimeFlow["Real-Time Update"]
+        direction TB
+        R1["Event occurs<br/>in backend"]
+        R2["Redis broadcasts<br/>to subscribers"]
+        R3["WebSocket pushes<br/>to clients"]
+        R4["React receives<br/>and updates"]
+        
+        R1 --> R2 --> R3 --> R4
+    end
+
+    %% Page to Component
+    DASH --> WC
+    DASH --> STATUS
+    DETAIL --> AF
+    DETAIL --> TL
+
+    %% Component to Hook
+    WC --> USE_WF
+    AF --> USE_WF
+    DASH --> USE_WS
+    DASH --> USE_RT
+
+    %% Hook to State
+    USE_WS --> WS_STATE
+    USE_WF --> WF_STATE
+    USE_RT --> WF_STATE
+
+    %% State to Context
+    WS_STATE --> CONTEXT
+    WF_STATE --> CONTEXT
+
+    %% Hook to Network
+    USE_WF --> API_CLIENT
+    USE_WS --> WS_CLIENT
+
+    %% Network to Backend
+    API_CLIENT -->|HTTP| REST_API
+    WS_CLIENT -->|WebSocket| WS_SERVER
+
+    %% Backend connections
+    WS_SERVER --> REDIS
+    REST_API --> REDIS
+
+    %% Semantic dark theme colors
+    
+    %% Pages - Entry points (Cyan/Teal)
+    style DASH fill:#26c6da,stroke:#4dd0e1,stroke-width:2px,color:#fff
+    style DETAIL fill:#26c6da,stroke:#4dd0e1,stroke-width:2px,color:#fff
+    style TIMELINE fill:#26c6da,stroke:#4dd0e1,stroke-width:2px,color:#fff
+
+    %% Components - UI building blocks (Blue)
+    style WC fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style AF fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style TL fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style STATUS fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+
+    %% Hooks - Logic layer (Purple)
+    style USE_WS fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style USE_WF fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style USE_RT fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+
+    %% State - Data management (Pink)
+    style CONTEXT fill:#ec407a,stroke:#f06292,stroke-width:3px,color:#fff
+    style WS_STATE fill:#ec407a,stroke:#f06292,stroke-width:2px,color:#fff
+    style WF_STATE fill:#ec407a,stroke:#f06292,stroke-width:2px,color:#fff
+
+    %% Network - Communication (Orange)
+    style API_CLIENT fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    style WS_CLIENT fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+
+    %% Backend - Server side (Green)
+    style REST_API fill:#66bb6a,stroke:#81c784,stroke-width:3px,color:#fff
+    style WS_SERVER fill:#66bb6a,stroke:#81c784,stroke-width:3px,color:#fff
+    style REDIS fill:#ef5350,stroke:#e57373,stroke-width:3px,color:#fff
+
+    %% User Flow - Progressive journey
+    style U1 fill:#546e7a,stroke:#78909c,stroke-width:2px,color:#fff
+    style U2 fill:#5c6bc0,stroke:#7986cb,stroke-width:2px,color:#fff
+    style U3 fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style U4 fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style U5 fill:#66bb6a,stroke:#81c784,stroke-width:2px,color:#fff
+
+    %% Approval Flow - Action sequence
+    style AP1 fill:#fdd835,stroke:#ffee58,stroke-width:2px,color:#263238
+    style AP2 fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    style AP3 fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style AP4 fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+    style AP5 fill:#66bb6a,stroke:#81c784,stroke-width:2px,color:#fff
+
+    %% Dynamic UI - Schema to render
+    style DU1 fill:#5c6bc0,stroke:#7986cb,stroke-width:2px,color:#fff
+    style DU2 fill:#7e57c2,stroke:#9575cd,stroke-width:2px,color:#fff
+    style DU3 fill:#42a5f5,stroke:#64b5f6,stroke-width:2px,color:#fff
+
+    %% Realtime Flow - Event propagation
+    style R1 fill:#546e7a,stroke:#78909c,stroke-width:2px,color:#fff
+    style R2 fill:#ef5350,stroke:#e57373,stroke-width:2px,color:#fff
+    style R3 fill:#ff9800,stroke:#ffb74d,stroke-width:2px,color:#fff
+    style R4 fill:#66bb6a,stroke:#81c784,stroke-width:2px,color:#fff
+```
+
+---
+
 ## 🚀 Getting Started
 
 Follow these steps to set up and run the backend locally.
@@ -850,4 +1030,105 @@ Open a browser-based GUI to view and edit your database:
 npx prisma studio
 ```
 
-This runs on `http://localhost:
+This runs on `http://localhost:5555` by default.
+
+#### Format Prisma Schema
+
+Format your `schema.prisma` file:
+
+```sh
+npx prisma format
+```
+
+#### Regenerate Prisma Client
+
+If you make changes to your schema without running migrations:
+
+```sh
+npx prisma generate
+```
+
+---
+
+## 🛠️ Tech Stack
+
+- **Backend:** Express.js
+- **Database:** PostgreSQL
+- **ORM:** Prisma
+- **Package Manager:** Yarn
+
+---
+
+## 📌 Notes
+
+- Ensure you have **Node.js** and **Yarn** installed before proceeding.
+- If using a different branch, replace `main` with the appropriate branch name.
+- Always run migrations after pulling changes that include schema updates.
+- Use `npx prisma studio` to visually inspect your database during development.
+
+---
+
+## 🚨 Redeployment Instructions
+
+The application is deployed using Docker. Follow these steps to redeploy the backend:
+
+1. Navigate to the backend project directory:
+
+   ```sh
+   cd projects/human-in-loop-backend
+   ```
+
+2. Pull the latest changes from the repository:
+
+   ```sh
+   git checkout main  # Replace with your appropriate branch if different
+   git pull
+   ```
+
+3. Stop and remove the currently running backend container:
+
+   ```sh
+   docker stop human-in-loop-backend
+   docker rm human-in-loop-backend
+   ```
+
+4. Build the new Docker image and run the updated Docker container:
+
+   ```sh
+   docker build -t human-in-loop-backend .
+   docker run -d \
+     --name human-in-loop-backend \
+     -p 4000:4000 \
+     --env-file .env \
+     human-in-loop-backend
+   ```
+
+5. **Run database migrations inside the Docker container (if needed):**
+
+   ```sh
+   docker exec -it human-in-loop-backend npx prisma migrate deploy
+   ```
+
+The updated backend application should now be redeployed successfully! 🎉
+
+---
+
+## 📂 Environment Variables
+
+Below is a list of required environment variables for this backend application:
+
+```env
+# Server & App Configuration
+PORT=4000
+LLM_BACKEND_HOST=your-llm-backend-url
+
+# Database
+DATABASE_URL=your-database-url
+
+# Authentication & Security
+JWT_SECRET=your-jwt-secret
+```
+
+## 📞 Support
+
+For issues or questions, please contact the development team or create an issue in the repository.
